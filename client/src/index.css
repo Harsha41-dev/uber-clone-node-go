@@ -60,11 +60,83 @@ body {
   margin: 0;
 }
 
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.auth-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  border: 1px solid #d8dee5;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #fff;
+}
+
+.primary-btn,
+.ghost-btn {
+  border: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 11px 16px;
+}
+
+.primary-btn {
+  background: #111827;
+  color: #fff;
+}
+
+.ghost-btn {
+  background: #eef2f7;
+  color: #18212b;
+}
+
+.message {
+  margin: 14px 0 0;
+  color: #0f766e;
+}
+
+.mini-box {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f5f7fb;
+}
+
+.mini-box p {
+  margin: 0 0 8px;
+}
+
+.mini-box p:last-child {
+  margin-bottom: 0;
+}
+
 .muted {
   color: #5d6b7a;
 }
 
 @media (max-width: 840px) {
+  .auth-layout,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
   .hero h1 {
     font-size: 28px;
   }
