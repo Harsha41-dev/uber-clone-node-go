@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import AuthCard from "./components/AuthCard";
 import DriverPanel from "./components/DriverPanel";
+import LiveDrivers from "./components/LiveDrivers";
+import RiderPanel from "./components/RiderPanel";
 import { setToken } from "./api/http";
 
 function App() {
   const [authData, setAuthData] = useState(null);
+  const [liveDrivers, setLiveDrivers] = useState([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("uber_auth");
@@ -18,14 +21,43 @@ function App() {
     setToken(parsedData.token);
   }, []);
 
+  useEffect(() => {
+    const realtimeUrl = import.meta.env.VITE_REALTIME_URL || "http://localhost:8080";
+    const wsUrl = realtimeUrl
+      .replace("http://", "ws://")
+      .replace("https://", "wss://") + "/ws";
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "drivers:update") {
+          setLiveDrivers(data.drivers || []);
+        }
+      } catch (error) {
+        return;
+      }
+    };
+
+    socket.onclose = function() {
+      setLiveDrivers([]);
+    };
+
+    return function() {
+      socket.close();
+    };
+  }, []);
+
   return (
     <div className="page-shell">
       <div className="hero">
         <p className="eyebrow">Uber Clone | MERN + Go</p>
-        <h1>Auth and driver onboarding are ready</h1>
+        <h1>Auth, ride booking and live driver updates are ready</h1>
         <p className="hero-copy">
-          Users can register as rider or driver. Drivers can save their
-          onboarding details and move online or offline from the panel.
+          Users can register as rider or driver. Riders can get fare estimates
+          and book rides. Drivers can save onboarding details, move online or
+          offline, and share location to the live driver list.
         </p>
       </div>
 
@@ -53,6 +85,16 @@ function App() {
           <DriverPanel auth={authData} />
         </div>
       ) : null}
+
+      {authData && authData.user && authData.user.role === "rider" ? (
+        <div className="section-gap">
+          <RiderPanel auth={authData} />
+        </div>
+      ) : null}
+
+      <div className="section-gap">
+        <LiveDrivers drivers={liveDrivers} />
+      </div>
     </div>
   );
 }

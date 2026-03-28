@@ -4,12 +4,17 @@ import api from "../api/http";
 function DriverPanel(props) {
   const auth = props.auth;
   const defaultName = auth && auth.user ? auth.user.name : "";
+  const realtimeUrl = import.meta.env.VITE_REALTIME_URL || "http://localhost:8080";
 
   const [profile, setProfile] = useState({
     name: defaultName,
     phone: "",
     vehicleType: "bike",
     vehicleNumber: ""
+  });
+  const [locationForm, setLocationForm] = useState({
+    lat: "28.6139",
+    lng: "77.2090"
   });
   const [driver, setDriver] = useState(null);
   const [message, setMessage] = useState("");
@@ -24,6 +29,16 @@ function DriverPanel(props) {
 
     setProfile({
       ...profile,
+      [name]: value
+    });
+  }
+
+  function handleLocation(e) {
+    const name = e.target.name;
+    const value = e.target.value;
+
+    setLocationForm({
+      ...locationForm,
       [name]: value
     });
   }
@@ -91,10 +106,64 @@ function DriverPanel(props) {
       if (isOnline) {
         setMessage("Driver is online");
       } else {
+        await clearLocation(response.data.driver);
         setMessage("Driver is offline");
       }
     } catch (error) {
       setMessage("Status update failed");
+    }
+  }
+
+  async function clearLocation(savedDriver) {
+    const driverId = savedDriver && (savedDriver._id || savedDriver.id);
+
+    if (!driverId) {
+      return;
+    }
+
+    try {
+      await fetch(`${realtimeUrl}/drivers/${driverId}`, {
+        method: "DELETE"
+      });
+    } catch (error) {
+      return;
+    }
+  }
+
+  async function shareLocation() {
+    if (!driver) {
+      setMessage("Onboard driver first");
+      return;
+    }
+
+    if (!driver.isOnline) {
+      setMessage("Go online first");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${realtimeUrl}/drivers/location`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          driverId: driver._id || driver.id,
+          name: driver.name,
+          vehicleType: driver.vehicleType,
+          lat: Number(locationForm.lat),
+          lng: Number(locationForm.lng)
+        })
+      });
+
+      if (!response.ok) {
+        setMessage("Location update failed");
+        return;
+      }
+
+      setMessage("Location shared");
+    } catch (error) {
+      setMessage("Location update failed");
     }
   }
 
@@ -134,6 +203,24 @@ function DriverPanel(props) {
         />
       </div>
 
+      <div className="list-box">
+        <h3>Driver Location</h3>
+        <div className="form-grid">
+          <input
+            name="lat"
+            value={locationForm.lat}
+            onChange={handleLocation}
+            placeholder="lat"
+          />
+          <input
+            name="lng"
+            value={locationForm.lng}
+            onChange={handleLocation}
+            placeholder="lng"
+          />
+        </div>
+      </div>
+
       <div className="row-actions">
         <button
           className="primary-btn"
@@ -150,6 +237,9 @@ function DriverPanel(props) {
           }}
         >
           Go Offline
+        </button>
+        <button className="ghost-btn" onClick={shareLocation}>
+          Share Location
         </button>
       </div>
 
