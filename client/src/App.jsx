@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AuthCard from "./components/AuthCard";
+import DriverPanel from "./components/DriverPanel";
 import { setToken } from "./api/http";
 
 function App() {
@@ -21,10 +22,10 @@ function App() {
     <div className="page-shell">
       <div className="hero">
         <p className="eyebrow">Uber Clone | MERN + Go</p>
-        <h1>Basic auth flow is ready</h1>
+        <h1>Auth and driver onboarding are ready</h1>
         <p className="hero-copy">
-          Today is focused on simple login and register flow. Rider flow, driver
-          flow and realtime tracking will come step by step.
+          Users can register as rider or driver. Drivers can save their
+          onboarding details and move online or offline from the panel.
         </p>
       </div>
 
@@ -46,6 +47,12 @@ function App() {
           )}
         </div>
       </div>
+
+      {authData && authData.user && authData.user.role === "driver" ? (
+        <div className="section-gap">
+          <DriverPanel auth={authData} />
+        </div>
+      ) : null}
     </div>
   );
 }

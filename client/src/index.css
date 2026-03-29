@@ -127,6 +127,17 @@ body {
   margin-bottom: 0;
 }
 
+.row-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.section-gap {
+  margin-top: 18px;
+}
+
 .muted {
   color: #5d6b7a;
 }
