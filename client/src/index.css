@@ -150,6 +150,25 @@ body {
   margin-top: 18px;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.stat-box {
+  background: #f5f7fb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.stat-number {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
 .list-box {
   margin-top: 16px;
 }
@@ -171,6 +190,18 @@ body {
   padding-bottom: 0;
 }
 
+.inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.time-text {
+  margin-top: 6px;
+  color: #5d6b7a;
+  font-size: 13px;
+}
+
 .muted {
   color: #5d6b7a;
 }
@@ -179,6 +210,10 @@ body {
   .auth-layout,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero h1 {

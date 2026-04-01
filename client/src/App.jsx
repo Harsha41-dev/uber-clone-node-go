@@ -53,11 +53,12 @@ function App() {
     <div className="page-shell">
       <div className="hero">
         <p className="eyebrow">Uber Clone | MERN + Go</p>
-        <h1>Auth, ride booking and live driver updates are ready</h1>
+        <h1>Auth, ride lifecycle and live driver tracking are ready</h1>
         <p className="hero-copy">
           Users can register as rider or driver. Riders can get fare estimates
           and book rides. Drivers can save onboarding details, move online or
-          offline, and share location to the live driver list.
+          offline, share location to the live driver list, accept open rides,
+          and move trips forward from assigned to completed.
         </p>
       </div>
 
@@ -88,7 +89,7 @@ function App() {
 
       {authData && authData.user && authData.user.role === "rider" ? (
         <div className="section-gap">
-          <RiderPanel auth={authData} />
+          <RiderPanel auth={authData} liveDrivers={liveDrivers} />
         </div>
       ) : null}
 

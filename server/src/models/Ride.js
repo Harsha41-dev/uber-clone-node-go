@@ -3,7 +3,10 @@ const mongoose = require("mongoose");
 const rideSchema = new mongoose.Schema(
   {
     riderId: String,
+    riderName: String,
     driverId: String,
+    driverName: String,
+    driverVehicleType: String,
     pickupText: String,
     dropText: String,
     pickupLat: Number,
@@ -16,6 +19,10 @@ const rideSchema = new mongoose.Schema(
       type: String,
       default: "searching",
     },
+    acceptedAt: Date,
+    startedAt: Date,
+    completedAt: Date,
+    cancelledAt: Date,
   },
   { timestamps: true }
 );
