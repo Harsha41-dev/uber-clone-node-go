@@ -196,10 +196,25 @@ body {
   flex-wrap: wrap;
 }
 
+.trip-actions {
+  margin-top: 10px;
+}
+
+.compact-box {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .time-text {
   margin-top: 6px;
   color: #5d6b7a;
   font-size: 13px;
+}
+
+.track-text {
+  margin: 0 0 8px;
+  color: #0f766e;
+  font-weight: 600;
 }
 
 .muted {

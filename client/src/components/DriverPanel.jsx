@@ -11,6 +11,7 @@ const initialStats = {
 
 function DriverPanel(props) {
   const auth = props.auth;
+  const liveDrivers = props.liveDrivers || [];
   const defaultName = auth && auth.user ? auth.user.name : "";
   const realtimeUrl = import.meta.env.VITE_REALTIME_URL || "http://localhost:8080";
 
@@ -28,6 +29,7 @@ function DriverPanel(props) {
   const [assignedRides, setAssignedRides] = useState([]);
   const [openRides, setOpenRides] = useState([]);
   const [stats, setStats] = useState(initialStats);
+  const [isSimulatorOn, setIsSimulatorOn] = useState(false);
   const [message, setMessage] = useState("");
 
   function isValidNumber(value) {
@@ -36,6 +38,39 @@ function DriverPanel(props) {
     }
 
     return !Number.isNaN(Number(value));
+  }
+
+  function toRad(value) {
+    return (value * Math.PI) / 180;
+  }
+
+  function getDistanceKm(lat1, lng1, lat2, lng2) {
+    const earthRadius = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  function getNextLocation(lat, lng, targetLat, targetLng) {
+    const stepRatio = 0.3;
+
+    return {
+      lat: lat + (targetLat - lat) * stepRatio,
+      lng: lng + (targetLng - lng) * stepRatio
+    };
+  }
+
+  function formatLocationValue(value) {
+    return Number(value).toFixed(4);
   }
 
   function formatTime(value) {
@@ -66,6 +101,30 @@ function DriverPanel(props) {
     }
 
     return parts.join(" | ");
+  }
+
+  function getTrackingTarget(ride) {
+    if (!ride) {
+      return null;
+    }
+
+    if (ride.status === "driver_assigned") {
+      return {
+        label: "pickup",
+        lat: ride.pickupLat,
+        lng: ride.pickupLng
+      };
+    }
+
+    if (ride.status === "in_progress") {
+      return {
+        label: "drop",
+        lat: ride.dropLat,
+        lng: ride.dropLng
+      };
+    }
+
+    return null;
   }
 
   useEffect(() => {
@@ -257,6 +316,7 @@ function DriverPanel(props) {
       if (isOnline) {
         setMessage("Driver is online");
       } else {
+        setIsSimulatorOn(false);
         await clearLocation(response.data.driver);
         setMessage("Driver is offline");
       }
@@ -281,6 +341,47 @@ function DriverPanel(props) {
     }
   }
 
+  async function pushLocation(lat, lng, successMessage) {
+    if (!driver) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${realtimeUrl}/drivers/location`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          driverId: driver._id || driver.id,
+          name: driver.name,
+          vehicleType: driver.vehicleType,
+          lat: Number(lat),
+          lng: Number(lng)
+        })
+      });
+
+      if (!response.ok) {
+        setMessage("Location update failed");
+        return false;
+      }
+
+      setLocationForm({
+        lat: formatLocationValue(lat),
+        lng: formatLocationValue(lng)
+      });
+
+      if (successMessage) {
+        setMessage(successMessage);
+      }
+
+      return true;
+    } catch (error) {
+      setMessage("Location update failed");
+      return false;
+    }
+  }
+
   async function shareLocation() {
     if (!driver) {
       setMessage("Onboard driver first");
@@ -297,30 +398,7 @@ function DriverPanel(props) {
       return;
     }
 
-    try {
-      const response = await fetch(`${realtimeUrl}/drivers/location`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          driverId: driver._id || driver.id,
-          name: driver.name,
-          vehicleType: driver.vehicleType,
-          lat: Number(locationForm.lat),
-          lng: Number(locationForm.lng)
-        })
-      });
-
-      if (!response.ok) {
-        setMessage("Location update failed");
-        return;
-      }
-
-      setMessage("Location shared");
-    } catch (error) {
-      setMessage("Location update failed");
-    }
+    await pushLocation(Number(locationForm.lat), Number(locationForm.lng), "Location shared");
   }
 
   async function updateRideStatus(rideId, status) {
@@ -346,6 +424,7 @@ function DriverPanel(props) {
       if (status === "in_progress") {
         setMessage("Ride started");
       } else {
+        setIsSimulatorOn(false);
         setMessage("Ride completed");
       }
     } catch (error) {
@@ -385,6 +464,140 @@ function DriverPanel(props) {
   const activeRide = assignedRides.find(function(ride) {
     return ride.status === "driver_assigned" || ride.status === "in_progress";
   });
+
+  const driverId = driver ? driver._id || driver.id : "";
+  let currentLiveDriver = null;
+
+  if (driverId) {
+    currentLiveDriver = liveDrivers.find(function(item) {
+      return item.driverId === driverId;
+    });
+  }
+
+  const trackingTarget = getTrackingTarget(activeRide);
+  let remainingDistanceKm = null;
+
+  if (
+    trackingTarget &&
+    currentLiveDriver &&
+    isValidNumber(currentLiveDriver.lat) &&
+    isValidNumber(currentLiveDriver.lng)
+  ) {
+    remainingDistanceKm = getDistanceKm(
+      Number(currentLiveDriver.lat),
+      Number(currentLiveDriver.lng),
+      Number(trackingTarget.lat),
+      Number(trackingTarget.lng)
+    );
+  } else if (
+    trackingTarget &&
+    isValidNumber(locationForm.lat) &&
+    isValidNumber(locationForm.lng)
+  ) {
+    remainingDistanceKm = getDistanceKm(
+      Number(locationForm.lat),
+      Number(locationForm.lng),
+      Number(trackingTarget.lat),
+      Number(trackingTarget.lng)
+    );
+  }
+
+  useEffect(() => {
+    if (!activeRide) {
+      setIsSimulatorOn(false);
+    }
+  }, [activeRide]);
+
+  useEffect(() => {
+    if (!isSimulatorOn) {
+      return;
+    }
+
+    if (!driver || !driver.isOnline) {
+      return;
+    }
+
+    if (!activeRide) {
+      return;
+    }
+
+    const target = getTrackingTarget(activeRide);
+
+    if (!target) {
+      return;
+    }
+
+    if (!isValidNumber(locationForm.lat) || !isValidNumber(locationForm.lng)) {
+      setIsSimulatorOn(false);
+      setMessage("Enter valid driver location");
+      return;
+    }
+
+    const timer = setInterval(async function() {
+      const currentLat = Number(locationForm.lat);
+      const currentLng = Number(locationForm.lng);
+      const distanceKm = getDistanceKm(
+        currentLat,
+        currentLng,
+        Number(target.lat),
+        Number(target.lng)
+      );
+
+      if (distanceKm < 0.05) {
+        setIsSimulatorOn(false);
+
+        if (target.label === "pickup") {
+          setMessage("Reached pickup area");
+        } else {
+          setMessage("Reached drop area");
+        }
+
+        return;
+      }
+
+      const nextLocation = getNextLocation(
+        currentLat,
+        currentLng,
+        Number(target.lat),
+        Number(target.lng)
+      );
+
+      const saved = await pushLocation(nextLocation.lat, nextLocation.lng, "");
+
+      if (!saved) {
+        setIsSimulatorOn(false);
+      }
+    }, 2500);
+
+    return function() {
+      clearInterval(timer);
+    };
+  }, [isSimulatorOn, driver, activeRide, locationForm]);
+
+  function toggleTripSimulation() {
+    if (!activeRide) {
+      setMessage("No active ride to simulate");
+      return;
+    }
+
+    if (!driver || !driver.isOnline) {
+      setMessage("Go online first");
+      return;
+    }
+
+    if (!isValidNumber(locationForm.lat) || !isValidNumber(locationForm.lng)) {
+      setMessage("Enter valid driver location");
+      return;
+    }
+
+    if (isSimulatorOn) {
+      setIsSimulatorOn(false);
+      setMessage("Trip simulation stopped");
+    } else {
+      setIsSimulatorOn(true);
+      setMessage("Trip simulation started");
+    }
+  }
 
   return (
     <div className="card">
@@ -460,6 +673,16 @@ function DriverPanel(props) {
             placeholder="lng"
           />
         </div>
+        {currentLiveDriver ? (
+          <div className="mini-box compact-box">
+            <p className="muted">
+              Live shared: {currentLiveDriver.lat?.toFixed?.(4)}, {currentLiveDriver.lng?.toFixed?.(4)}
+            </p>
+            {currentLiveDriver.updatedAt ? (
+              <p className="muted">Updated: {formatTime(currentLiveDriver.updatedAt)}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="row-actions">
@@ -482,6 +705,15 @@ function DriverPanel(props) {
         <button className="ghost-btn" onClick={shareLocation}>
           Share Location
         </button>
+        {activeRide ? (
+          <button className="ghost-btn" onClick={toggleTripSimulation}>
+            {isSimulatorOn
+              ? "Stop Simulation"
+              : activeRide.status === "driver_assigned"
+                ? "Simulate Pickup"
+                : "Simulate Trip"}
+          </button>
+        ) : null}
       </div>
 
       {driver ? (
@@ -507,9 +739,39 @@ function DriverPanel(props) {
               {activeRide.status} | Rs {activeRide.fare} | {activeRide.distanceKm} km
             </p>
             <p className="muted">Rider: {activeRide.riderName || "Unknown rider"}</p>
+            {trackingTarget ? (
+              <p className="muted">
+                Heading to {trackingTarget.label}
+                {remainingDistanceKm !== null ? ` | ${remainingDistanceKm.toFixed(2)} km left` : ""}
+              </p>
+            ) : null}
             {getRideTimeText(activeRide) ? (
               <p className="time-text">{getRideTimeText(activeRide)}</p>
             ) : null}
+
+            <div className="inline-actions trip-actions">
+              {activeRide.status === "driver_assigned" ? (
+                <button
+                  className="primary-btn"
+                  onClick={function() {
+                    updateRideStatus(activeRide._id || activeRide.id, "in_progress");
+                  }}
+                >
+                  Start Ride
+                </button>
+              ) : null}
+
+              {activeRide.status === "in_progress" ? (
+                <button
+                  className="ghost-btn"
+                  onClick={function() {
+                    updateRideStatus(activeRide._id || activeRide.id, "completed");
+                  }}
+                >
+                  Complete Ride
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

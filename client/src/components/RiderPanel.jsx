@@ -37,6 +37,26 @@ function RiderPanel(props) {
     return !Number.isNaN(Number(value));
   }
 
+  function toRad(value) {
+    return (value * Math.PI) / 180;
+  }
+
+  function getDistanceKm(lat1, lng1, lat2, lng2) {
+    const earthRadius = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
   function formatTime(value) {
     if (!value) {
       return "";
@@ -281,6 +301,28 @@ function RiderPanel(props) {
     });
   }
 
+  let tripTrackingText = "";
+
+  if (activeRide && activeDriver && activeRide.status === "driver_assigned") {
+    const distanceToPickup = getDistanceKm(
+      Number(activeDriver.lat),
+      Number(activeDriver.lng),
+      Number(activeRide.pickupLat),
+      Number(activeRide.pickupLng)
+    );
+    tripTrackingText = `Driver is ${distanceToPickup.toFixed(2)} km from pickup`;
+  }
+
+  if (activeRide && activeDriver && activeRide.status === "in_progress") {
+    const distanceToDrop = getDistanceKm(
+      Number(activeDriver.lat),
+      Number(activeDriver.lng),
+      Number(activeRide.dropLat),
+      Number(activeRide.dropLng)
+    );
+    tripTrackingText = `Trip is ${distanceToDrop.toFixed(2)} km from drop`;
+  }
+
   return (
     <div className="card">
       <div className="card-head">
@@ -391,12 +433,43 @@ function RiderPanel(props) {
                 Driver live: {activeDriver.lat?.toFixed?.(4)}, {activeDriver.lng?.toFixed?.(4)}
               </p>
             ) : null}
+            {tripTrackingText ? <p className="track-text">{tripTrackingText}</p> : null}
             {activeDriver && activeDriver.updatedAt ? (
               <p className="muted">Location updated: {formatTime(activeDriver.updatedAt)}</p>
+            ) : null}
+            {!activeDriver && activeRide.status !== "searching" ? (
+              <p className="muted">Driver has not shared live location yet</p>
+            ) : null}
+            {activeRide.status === "searching" ? (
+              <p className="muted">Use Find Driver or wait for an online driver</p>
             ) : null}
             {getRideTimeText(activeRide) ? (
               <p className="time-text">{getRideTimeText(activeRide)}</p>
             ) : null}
+
+            <div className="inline-actions trip-actions">
+              {activeRide.status === "searching" ? (
+                <button
+                  className="ghost-btn"
+                  onClick={function() {
+                    retryDriverSearch(activeRide._id || activeRide.id);
+                  }}
+                >
+                  Find Driver
+                </button>
+              ) : null}
+
+              {activeRide.status === "searching" || activeRide.status === "driver_assigned" ? (
+                <button
+                  className="ghost-btn"
+                  onClick={function() {
+                    cancelRide(activeRide._id || activeRide.id);
+                  }}
+                >
+                  Cancel Ride
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

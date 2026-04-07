@@ -1,4 +1,12 @@
 function LiveDrivers({ drivers }) {
+  function formatTime(value) {
+    if (!value) {
+      return "";
+    }
+
+    return new Date(value).toLocaleTimeString();
+  }
+
   return (
     <div className="card">
       <div className="card-head">
@@ -13,6 +21,9 @@ function LiveDrivers({ drivers }) {
           <div>
             <strong>{driver.name || "Unnamed driver"}</strong>
             <div className="muted">{driver.vehicleType || "cab"}</div>
+            {driver.updatedAt ? (
+              <div className="time-text">Updated: {formatTime(driver.updatedAt)}</div>
+            ) : null}
           </div>
           <div className="muted">
             {driver.lat?.toFixed?.(4)}, {driver.lng?.toFixed?.(4)}

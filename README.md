@@ -17,6 +17,7 @@ Right now the working parts are:
 - drivers can accept open rides and update ride progress
 - rider and driver trip summaries with active ride tracking
 - ride timestamps for accepted, started, completed and cancelled states
+- driver-side trip simulation with rider live distance tracking
 
 The project still uses a simple UI, but the main ride lifecycle is now connected end to end.
 
