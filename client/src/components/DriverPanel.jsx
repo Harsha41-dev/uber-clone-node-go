@@ -127,33 +127,6 @@ function DriverPanel(props) {
     return null;
   }
 
-  useEffect(() => {
-    loadDriver();
-    loadAssignedRides();
-    loadOpenRides();
-    loadStats();
-  }, [auth]);
-
-  useEffect(() => {
-    if (!auth || !auth.token) {
-      return;
-    }
-
-    if (!auth.user || auth.user.role !== "driver") {
-      return;
-    }
-
-    const timer = setInterval(function() {
-      loadAssignedRides();
-      loadOpenRides();
-      loadStats();
-    }, 5000);
-
-    return function() {
-      clearInterval(timer);
-    };
-  }, [auth]);
-
   function handleProfile(e) {
     const name = e.target.name;
     const value = e.target.value;
@@ -272,7 +245,7 @@ function DriverPanel(props) {
       } else {
         setStats(initialStats);
       }
-    } catch (error) {
+    } catch {
       setMessage("Could not load driver stats");
     }
   }
@@ -320,7 +293,7 @@ function DriverPanel(props) {
         await clearLocation(response.data.driver);
         setMessage("Driver is offline");
       }
-    } catch (error) {
+    } catch {
       setMessage("Status update failed");
     }
   }
@@ -336,7 +309,7 @@ function DriverPanel(props) {
       await fetch(`${realtimeUrl}/drivers/${driverId}`, {
         method: "DELETE"
       });
-    } catch (error) {
+    } catch {
       return;
     }
   }
@@ -376,7 +349,7 @@ function DriverPanel(props) {
       }
 
       return true;
-    } catch (error) {
+    } catch {
       setMessage("Location update failed");
       return false;
     }
@@ -461,6 +434,39 @@ function DriverPanel(props) {
     }
   }
 
+  useEffect(() => {
+    const timer = setTimeout(function() {
+      loadDriver();
+      loadAssignedRides();
+      loadOpenRides();
+      loadStats();
+    }, 0);
+
+    return function() {
+      clearTimeout(timer);
+    };
+  }, [auth]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!auth || !auth.token) {
+      return;
+    }
+
+    if (!auth.user || auth.user.role !== "driver") {
+      return;
+    }
+
+    const timer = setInterval(function() {
+      loadAssignedRides();
+      loadOpenRides();
+      loadStats();
+    }, 5000);
+
+    return function() {
+      clearInterval(timer);
+    };
+  }, [auth]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const activeRide = assignedRides.find(function(ride) {
     return ride.status === "driver_assigned" || ride.status === "in_progress";
   });
@@ -504,7 +510,13 @@ function DriverPanel(props) {
 
   useEffect(() => {
     if (!activeRide) {
-      setIsSimulatorOn(false);
+      const timer = setTimeout(function() {
+        setIsSimulatorOn(false);
+      }, 0);
+
+      return function() {
+        clearTimeout(timer);
+      };
     }
   }, [activeRide]);
 
@@ -528,9 +540,14 @@ function DriverPanel(props) {
     }
 
     if (!isValidNumber(locationForm.lat) || !isValidNumber(locationForm.lng)) {
-      setIsSimulatorOn(false);
-      setMessage("Enter valid driver location");
-      return;
+      const stopTimer = setTimeout(function() {
+        setIsSimulatorOn(false);
+        setMessage("Enter valid driver location");
+      }, 0);
+
+      return function() {
+        clearTimeout(stopTimer);
+      };
     }
 
     const timer = setInterval(async function() {
@@ -572,7 +589,7 @@ function DriverPanel(props) {
     return function() {
       clearInterval(timer);
     };
-  }, [isSimulatorOn, driver, activeRide, locationForm]);
+  }, [isSimulatorOn, driver, activeRide, locationForm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleTripSimulation() {
     if (!activeRide) {

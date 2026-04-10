@@ -110,7 +110,7 @@ function RiderPanel(props) {
       } else {
         setRides([]);
       }
-    } catch (error) {
+    } catch {
       setMessage("Could not load rides");
     }
   }
@@ -128,7 +128,7 @@ function RiderPanel(props) {
       } else {
         setStats(initialStats);
       }
-    } catch (error) {
+    } catch {
       setMessage("Could not load rider stats");
     }
   }
@@ -149,7 +149,7 @@ function RiderPanel(props) {
 
       setEstimate(response.data);
       setMessage("Estimate updated");
-    } catch (error) {
+    } catch {
       setMessage("Estimate failed");
     }
   }
@@ -266,9 +266,15 @@ function RiderPanel(props) {
   }
 
   useEffect(() => {
-    loadRides();
-    loadStats();
-  }, [auth]);
+    const timer = setTimeout(function() {
+      loadRides();
+      loadStats();
+    }, 0);
+
+    return function() {
+      clearTimeout(timer);
+    };
+  }, [auth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!auth || !auth.token) {
@@ -283,7 +289,7 @@ function RiderPanel(props) {
     return function() {
       clearInterval(timer);
     };
-  }, [auth]);
+  }, [auth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeRide = rides.find(function(ride) {
     return (

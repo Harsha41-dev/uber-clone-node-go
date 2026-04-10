@@ -5,21 +5,25 @@ import LiveDrivers from "./components/LiveDrivers";
 import RiderPanel from "./components/RiderPanel";
 import { setToken } from "./api/http";
 
-function App() {
-  const [authData, setAuthData] = useState(null);
-  const [liveDrivers, setLiveDrivers] = useState([]);
-
-  useEffect(() => {
+function getSavedAuth() {
+  try {
     const saved = localStorage.getItem("uber_auth");
 
     if (!saved) {
-      return;
+      return null;
     }
 
     const parsedData = JSON.parse(saved);
-    setAuthData(parsedData);
     setToken(parsedData.token);
-  }, []);
+    return parsedData;
+  } catch {
+    return null;
+  }
+}
+
+function App() {
+  const [authData, setAuthData] = useState(getSavedAuth);
+  const [liveDrivers, setLiveDrivers] = useState([]);
 
   useEffect(() => {
     const realtimeUrl = import.meta.env.VITE_REALTIME_URL || "http://localhost:8080";
@@ -35,7 +39,7 @@ function App() {
         if (data.type === "drivers:update") {
           setLiveDrivers(data.drivers || []);
         }
-      } catch (error) {
+      } catch {
         return;
       }
     };
